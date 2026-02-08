@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIFEFUND 建築知識トレーニング</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ===== 登録画面 ===== -->
+  <div id="registerScreen" class="screen">
+    <div class="register-container">
+      <div class="register-logo">
+        <div class="register-icon">🏠</div>
+        <h1>LIFEFUND<br><span>建築知識トレーニング</span></h1>
+        <p class="register-sub">住宅アドバイザーのための学習アプリ</p>
+      </div>
+      <div class="register-form">
+        <label for="userName">あなたの名前を入力してください</label>
+        <input type="text" id="userName" placeholder="例：山田太郎" maxlength="20">
+        <label for="companyCode" style="margin-top:12px">会社コード（所属先から共有されたコードを入力）</label>
+        <input type="text" id="companyCode" placeholder="例：LIFEFUND" maxlength="30">
+        <button class="btn-accent" onclick="registerUser()">はじめる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== メイン画面（タブ切替） ===== -->
+  <div id="mainApp" class="hidden">
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="header-logo">🏠 LIFEFUND</div>
+      </div>
+      <div class="header-right">
+        <div class="header-user" id="headerUser">
+          <span class="header-company" id="headerCompany" style="font-size:0.75rem;color:var(--text-light);margin-right:4px"></span>
+          <span class="user-rank" id="headerRank">🔰</span>
+          <span class="user-name" id="headerName"></span>
+          <span class="user-xp" id="headerXP">0 XP</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- タブバー -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="home" onclick="switchTab('home')">
+        <span class="tab-icon">📚</span><span class="tab-label">学習</span>
+      </button>
+      <button class="tab-btn" data-tab="test" onclick="switchTab('test')">
+        <span class="tab-icon">📝</span><span class="tab-label">テスト</span>
+      </button>
+      <button class="tab-btn" data-tab="ranking" onclick="switchTab('ranking')">
+        <span class="tab-icon">🏆</span><span class="tab-label">ランキング</span>
+      </button>
+      <button class="tab-btn" data-tab="profile" onclick="switchTab('profile')">
+        <span class="tab-icon">👤</span><span class="tab-label">マイページ</span>
+      </button>
+    </nav>
+
+    <!-- ===== 学習タブ ===== -->
+    <div id="homeTab" class="tab-content active">
+      <div class="content-wrapper">
+        <!-- 全体進捗 -->
+        <div class="progress-card">
+          <div class="progress-card-header">
+            <h3>全体の習得進捗</h3>
+            <span class="progress-percent" id="overallPercent">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="overallFill" style="width:0%"></div></div>
+          <div class="progress-sub" id="overallSub">0 / 13 レベルクリア</div>
+        </div>
+
+        <!-- レベル一覧 -->
+        <div id="levelList" class="level-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== テストタブ ===== -->
+    <div id="testTab" class="tab-content">
+      <div class="content-wrapper">
+        <div class="test-hero">
+          <div class="test-hero-icon">📝</div>
+          <h2>総合テスト</h2>
+          <p>全カテゴリからランダムに20問出題。<br>このスコアがランキングに反映されます。</p>
+        </div>
+        <div class="test-options">
+          <div class="test-option-card" onclick="startTest(20)">
+            <div class="test-option-icon">⚡</div>
+            <h3>スタンダード（20問）</h3>
+            <p>全カテゴリから20問ランダム出題</p>
+          </div>
+          <div class="test-option-card" onclick="startTest(40)">
+            <div class="test-option-icon">🔥</div>
+            <h3>チャレンジ（40問）</h3>
+            <p>より多くの問題で実力を測る</p>
+          </div>
+        </div>
+        <div class="test-history" id="testHistory"></div>
+      </div>
+    </div>
+
+    <!-- ===== ランキングタブ ===== -->
+    <div id="rankingTab" class="tab-content">
+      <div class="content-wrapper">
+        <h2 class="section-title">🏆 ランキング</h2>
+        <p class="section-desc">総合テストのベストスコアで競争！</p>
+        <div class="ranking-company-label" id="rankingCompanyLabel" style="text-align:center;padding:8px 16px;margin-bottom:12px;background:var(--bg-light);border-radius:var(--radius-sm);font-size:0.9rem;color:var(--text-light)"></div>
+        <div id="rankingList" class="ranking-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== マイページタブ ===== -->
+    <div id="profileTab" class="tab-content">
+      <div class="content-wrapper">
+        <div class="profile-card">
+          <div class="profile-rank-badge" id="profileRankBadge">🔰</div>
+          <h2 id="profileName"></h2>
+          <div class="profile-rank-name" id="profileRankName">見習い</div>
+          <div class="profile-company" id="profileCompany" style="font-size:0.85rem;color:var(--text-light);margin-top:4px"></div>
+          <div class="profile-stats">
+            <div class="stat-item"><div class="stat-value" id="profileXP">0</div><div class="stat-label">XP</div></div>
+            <div class="stat-item"><div class="stat-value" id="profileCorrect">0</div><div class="stat-label">正解数</div></div>
+            <div class="stat-item"><div class="stat-value" id="profileStreak">0</div><div class="stat-label">連続正解</div></div>
+            <div class="stat-item"><div class="stat-value" id="profileBest">-</div><div class="stat-label">テスト最高点</div></div>
+          </div>
+        </div>
+        <div class="badges-section">
+          <h3>🎖️ 獲得バッジ</h3>
+          <div class="badges-grid" id="badgesGrid"></div>
+        </div>
+        <div class="profile-actions">
+          <button class="btn-outline-danger" onclick="resetAllData()">全データをリセット</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== クイズ画面（オーバーレイ） ===== -->
+  <div id="quizOverlay" class="overlay hidden">
+    <div class="quiz-container">
+      <div class="quiz-top-bar">
+        <button class="quiz-close-btn" onclick="exitQuiz()">✕</button>
+        <div class="quiz-info">
+          <span id="quizLevelName"></span>
+          <span id="quizCounter"></span>
+        </div>
+        <div class="quiz-streak-display" id="quizStreakDisplay">🔥 0</div>
+      </div>
+      <div class="quiz-progress-track"><div class="quiz-progress-fill" id="quizProgressFill"></div></div>
+
+      <div class="quiz-body" id="quizBody">
+        <!-- 問題が動的に挿入される -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 結果画面（オーバーレイ） ===== -->
+  <div id="resultOverlay" class="overlay hidden">
+    <div class="result-container">
+      <div class="result-header" id="resultHeader">
+        <div class="result-emoji" id="resultEmoji">🎉</div>
+        <h2 id="resultTitle">結果</h2>
+      </div>
+      <div class="result-score-ring" id="resultRing">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#e8e8e8" stroke-width="8"/>
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#4caf50" stroke-width="8" stroke-dasharray="339.292" stroke-dashoffset="339.292" id="resultCircle" style="transform:rotate(-90deg);transform-origin:center"/>
+        </svg>
+        <div class="result-score-text">
+          <span class="result-score-num" id="resultScoreNum">0</span>
+          <span class="result-score-den" id="resultScoreDen">/ 0</span>
+        </div>
+      </div>
+      <div class="result-xp-earned" id="resultXP">+0 XP</div>
+      <div class="result-message" id="resultMessage"></div>
+
+      <!-- 間違えた問題の復習 -->
+      <div class="review-section" id="reviewSection" style="display:none">
+        <h3>📖 間違えた問題の復習</h3>
+        <div id="reviewList"></div>
+      </div>
+
+      <div class="result-actions">
+        <button class="btn-accent" onclick="retryQuiz()">もう一度チャレンジ</button>
+        <button class="btn-outline" onclick="closeResult()">戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AI判定モーダル ===== -->
+  <div id="aiModal" class="overlay hidden">
+    <div class="ai-modal-content">
+      <div class="ai-thinking" id="aiThinking">
+        <div class="ai-spinner"></div>
+        <p>AIが回答を判定中...</p>
+      </div>
+      <div class="ai-result hidden" id="aiResult">
+        <div class="ai-result-icon" id="aiResultIcon">✅</div>
+        <div class="ai-result-label" id="aiResultLabel">正解！</div>
+        <div class="ai-result-detail" id="aiResultDetail"></div>
+        <button class="btn-accent" id="aiContinueBtn" onclick="continueAfterAI()">次へ</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="quiz-data.js"></script>
+  <script src="quiz-data2.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
