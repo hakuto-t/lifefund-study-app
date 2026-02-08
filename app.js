@@ -1,5 +1,18 @@
 // ===== LIFEFUND 建築知識トレーニング - アプリケーション =====
 
+// ===== Firebase初期化 =====
+const firebaseConfig = {
+  apiKey: "AIzaSyDhYxaUZEa4CtvIgSM3dnVZJ4_2lCNM3Is",
+  authDomain: "lifefund-study-app.firebaseapp.com",
+  databaseURL: "https://lifefund-study-app-default-rtdb.firebaseio.com",
+  projectId: "lifefund-study-app",
+  storageBucket: "lifefund-study-app.firebasestorage.app",
+  messagingSenderId: "165298090115",
+  appId: "1:165298090115:web:683717ac39b1b55ac76bb6"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 // データ統合
 const ALL_LEVELS = [...QUIZ_DATA.levels, ...(typeof QUIZ_DATA_2 !== 'undefined' ? QUIZ_DATA_2.levels : [])];
 
@@ -454,15 +467,33 @@ function showResult() {
     if (testScore >= 80 && !stats.badges.includes('test_80')) stats.badges.push('test_80');
     if (testScore === 100 && !stats.badges.includes('test_100')) stats.badges.push('test_100');
 
-    // ランキング更新
+    // ランキング更新（Firebase + localStorage）
     const user = getUser();
+    const companyCode = user.companyCode || '';
+    const rankingKey = companyCode + '_' + user.name;
+    // Firebaseのキーに使えない文字を置換
+    const safeKey = rankingKey.replace(/[.#$\/\[\]]/g, '_');
+    const entry = { name: user.name, companyCode, score: testScore, date: Date.now() };
+
+    // Firebaseに保存（ベストスコアのみ更新）
+    const ref = db.ref('ranking/' + safeKey);
+    ref.once('value').then(snap => {
+      const existing = snap.val();
+      if (!existing || testScore > existing.score) {
+        ref.set(entry);
+      } else {
+        ref.update({ date: Date.now() });
+      }
+    }).catch(err => console.warn('Firebase ranking write failed:', err));
+
+    // localStorageにもフォールバック保存
     let ranking = getRanking();
-    const existing = ranking.find(r => r.name === user.name && r.companyCode === (user.companyCode || ''));
-    if (existing) {
-      if (testScore > existing.score) existing.score = testScore;
-      existing.date = Date.now();
+    const existingLocal = ranking.find(r => r.name === user.name && r.companyCode === companyCode);
+    if (existingLocal) {
+      if (testScore > existingLocal.score) existingLocal.score = testScore;
+      existingLocal.date = Date.now();
     } else {
-      ranking.push({ name: user.name, companyCode: user.companyCode || '', score: testScore, date: Date.now() });
+      ranking.push(entry);
     }
     ranking.sort((a, b) => b.score - a.score);
     save(KEYS.ranking, ranking);
@@ -529,14 +560,10 @@ function showResult() {
 
 // ===== ランキング =====
 function renderRanking() {
-  const allRanking = getRanking();
   const user = getUser();
   const container = document.getElementById('rankingList');
   const companyLabel = document.getElementById('rankingCompanyLabel');
   const userCode = user ? (user.companyCode || '') : '';
-
-  // 会社コードでフィルタリング
-  const ranking = allRanking.filter(r => (r.companyCode || '') === userCode);
 
   // 会社コードラベル表示
   if (companyLabel) {
@@ -544,6 +571,33 @@ function renderRanking() {
     companyLabel.style.display = userCode ? 'block' : 'none';
   }
 
+  // ローディング表示
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-light)">ランキングを読み込み中...</div>';
+
+  // Firebaseからランキングを取得
+  db.ref('ranking').once('value').then(snap => {
+    const data = snap.val();
+    let allEntries = [];
+    if (data) {
+      allEntries = Object.values(data);
+    }
+
+    // 会社コードでフィルタリング
+    const ranking = allEntries
+      .filter(r => (r.companyCode || '') === userCode)
+      .sort((a, b) => b.score - a.score);
+
+    displayRanking(ranking, user, container);
+  }).catch(err => {
+    console.warn('Firebase ranking read failed, using localStorage:', err);
+    // フォールバック: localStorageから取得
+    const allRanking = getRanking();
+    const ranking = allRanking.filter(r => (r.companyCode || '') === userCode);
+    displayRanking(ranking, user, container);
+  });
+}
+
+function displayRanking(ranking, user, container) {
   if (ranking.length === 0) {
     container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-light)">まだランキングデータがありません。<br>総合テストを受けてみましょう！</div>';
     return;
